@@ -27,7 +27,7 @@ var (
 )
 
 const (
-	JWT_HASH_NAME       = "go-starter-template-active-jwt-clients"
+	JWT_HASH_NAME       = "afriHacks2023-stressless-jwt-clients"
 	SessionTTLInMinutes = 10
 )
 
