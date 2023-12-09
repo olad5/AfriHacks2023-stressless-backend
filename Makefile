@@ -6,3 +6,6 @@ app.docker.start:
 
 run.dev.watch: app.docker.start 
 		air -c .air.toml
+
+build.dev: 
+		go build -v cmd/main.go 
