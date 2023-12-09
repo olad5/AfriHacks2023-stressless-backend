@@ -13,6 +13,7 @@ type Configurations struct {
 	Port         string
 	JwtSecretKey string
 	CacheAddress string
+	LogLevel     string
 }
 
 func GetConfig(filepath string) *Configurations {
@@ -27,6 +28,7 @@ func GetConfig(filepath string) *Configurations {
 		Port:         os.Getenv("PORT"),
 		JwtSecretKey: os.Getenv("SECRET_KEY"),
 		CacheAddress: os.Getenv("REDIS_URL"),
+		LogLevel:     os.Getenv("LOG_LEVEL"),
 	}
 
 	return &configurations

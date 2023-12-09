@@ -10,6 +10,7 @@ import (
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/infra"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/zap"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -18,19 +19,21 @@ import (
 var contextTimeoutDuration = 5 * time.Second
 
 type MongoUserRepository struct {
-	users *mongo.Collection
+	users  *mongo.Collection
+	logger *zap.Logger
 }
 
-func NewMongoUserRepo(ctx context.Context, config *config.Configurations) (*MongoUserRepository, error) {
+func NewMongoUserRepo(ctx context.Context, config *config.Configurations, logger *zap.Logger) (*MongoUserRepository, error) {
 	opts := options.Client()
 	client, err := mongo.Connect(ctx, opts.ApplyURI(config.DatabaseUrl))
 	if err != nil {
+		logger.Error("failed to create a mongo client: %w", zap.Error(err))
 		return nil, fmt.Errorf("failed to create a mongo client: %w", err)
 	}
 
 	userCollection := client.Database(config.DatabaseName).Collection("users")
 
-	return &MongoUserRepository{users: userCollection}, nil
+	return &MongoUserRepository{users: userCollection, logger: logger}, nil
 }
 
 func (m *MongoUserRepository) CreateUser(ctx context.Context, user domain.User) error {
@@ -39,11 +42,13 @@ func (m *MongoUserRepository) CreateUser(ctx context.Context, user domain.User) 
 
 	mongoUser, err := toMongoUser(user)
 	if err != nil {
+		m.logger.Error("failed to map domain user to MongoUser: %w", zap.Error(err))
 		return fmt.Errorf("failed to map domain user to MongoUser: %w", err)
 	}
 
 	_, err = m.users.InsertOne(ctx, mongoUser)
 	if err != nil {
+		m.logger.Error("failed to persist todo: %w", zap.Error(err))
 		return fmt.Errorf("failed to persist todo: %w", err)
 	}
 	return nil
@@ -53,6 +58,7 @@ func (m *MongoUserRepository) GetUserByEmail(ctx context.Context, userEmail stri
 	user := mongoUser{}
 	err := m.users.FindOne(ctx, bson.M{"email": userEmail}).Decode(&user)
 	if err != nil {
+		m.logger.Error("failed retrieve user by email: %w", zap.Error(err))
 		return domain.User{}, infra.ErrUserNotFound
 	}
 	return toDomainUser(user), nil
@@ -62,6 +68,7 @@ func (m *MongoUserRepository) GetUserByUserId(ctx context.Context, userId primit
 	user := mongoUser{}
 	err := m.users.FindOne(ctx, bson.M{"_id": userId}).Decode(&user)
 	if err != nil {
+		m.logger.Error("failed retrieve user by id: %w", zap.Error(err))
 		return domain.User{}, infra.ErrUserNotFound
 	}
 

@@ -7,15 +7,17 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/olad5/AfriHacks2023-stressless-backend/config"
+	"go.uber.org/zap"
 )
 
 type RedisCache struct {
 	Client *redis.Client
+	logger *zap.Logger
 }
 
 var ttl = time.Minute * 30
 
-func New(ctx context.Context, configurations *config.Configurations) (*RedisCache, error) {
+func New(ctx context.Context, configurations *config.Configurations, logger *zap.Logger) (*RedisCache, error) {
 	opt, err := redis.ParseURL(configurations.CacheAddress)
 	if err != nil {
 		return nil, err
@@ -28,6 +30,7 @@ func New(ctx context.Context, configurations *config.Configurations) (*RedisCach
 
 	return &RedisCache{
 		Client: client,
+		logger: logger,
 	}, nil
 }
 

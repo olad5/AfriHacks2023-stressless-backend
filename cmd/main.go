@@ -11,45 +11,52 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/olad5/AfriHacks2023-stressless-backend/config"
 	authMiddleware "github.com/olad5/AfriHacks2023-stressless-backend/internal/handlers/auth"
+	loggingMiddleware "github.com/olad5/AfriHacks2023-stressless-backend/internal/handlers/logging"
 	userHandlers "github.com/olad5/AfriHacks2023-stressless-backend/internal/handlers/users"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/infra/mongo"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/infra/redis"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/services/auth"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/usecases/users"
+	"github.com/olad5/AfriHacks2023-stressless-backend/pkg/utils/logger"
 )
 
-func NewHttpRouter(ctx context.Context, configurations *config.Configurations) http.Handler {
-	userRepo, err := mongo.NewMongoUserRepo(ctx, configurations)
+func NewHttpRouter(ctx context.Context, configurations *config.Configurations, logger *zap.Logger) http.Handler {
+	userRepo, err := mongo.NewMongoUserRepo(ctx, configurations, logger)
 	if err != nil {
 		log.Fatal("Error Initializing User Repo", err)
 	}
 
-	redisCache, err := redis.New(ctx, configurations)
+	redisCache, err := redis.New(ctx, configurations, logger)
 	if err != nil {
 		log.Fatal("Error Initializing redisCache", err)
 	}
 
-	authService, err := auth.NewRedisAuthService(ctx, redisCache, configurations)
+	authService, err := auth.NewRedisAuthService(ctx, redisCache, configurations, logger)
 	if err != nil {
 		log.Fatal("Error Initializing Auth Service", err)
 	}
 
-	userService, err := users.NewUserService(userRepo, authService)
+	userService, err := users.NewUserService(userRepo, authService, logger)
 	if err != nil {
 		log.Fatal("Error Initializing UserService")
 	}
 
-	userHandler, err := userHandlers.NewUserHandler(*userService, authService)
+	userHandler, err := userHandlers.NewUserHandler(*userService, authService, logger)
 	if err != nil {
 		log.Fatal("failed to create the User handler: ", err)
 	}
 
 	router := chi.NewRouter()
+
+	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "StressLess Backend is live!")
+	})
 
 	router.Group(func(r chi.Router) {
 		r.Use(
@@ -79,13 +86,17 @@ func main() {
 	configurations := config.GetConfig(".env")
 	ctx := context.Background()
 
-	appRouter := NewHttpRouter(ctx, configurations)
+	l := logger.Get(configurations)
+	appRouter := NewHttpRouter(ctx, configurations, l)
 
 	port := configurations.Port
-	server := &http.Server{Addr: ":" + port, Handler: appRouter}
+
+	server := &http.Server{Addr: ":" + port, Handler: loggingMiddleware.RequestLogger(appRouter, configurations)}
 	go func() {
-		message := "Server is running on port " + port
-		fmt.Println(message)
+		l.Info(
+			"starting application server on port: "+port,
+			zap.String("port", port),
+		)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			fmt.Printf("HTTP server ListenAndServe: %v", err)
 		}

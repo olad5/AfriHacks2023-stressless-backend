@@ -12,11 +12,13 @@ import (
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/domain"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/infra"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/zap"
 )
 
 type RedisAuthService struct {
 	Cache     infra.Cache
 	SecretKey string
+	logger    *zap.Logger
 }
 
 var (
@@ -31,7 +33,7 @@ const (
 	SessionTTLInMinutes = 10
 )
 
-func NewRedisAuthService(ctx context.Context, cache infra.Cache, configurations *config.Configurations) (*RedisAuthService, error) {
+func NewRedisAuthService(ctx context.Context, cache infra.Cache, configurations *config.Configurations, logger *zap.Logger) (*RedisAuthService, error) {
 	if cache == nil {
 		return nil, fmt.Errorf("failed to initialize auth service, cache is nil")
 	}
@@ -40,7 +42,7 @@ func NewRedisAuthService(ctx context.Context, cache infra.Cache, configurations 
 		return nil, err
 	}
 
-	return &RedisAuthService{cache, configurations.JwtSecretKey}, nil
+	return &RedisAuthService{cache, configurations.JwtSecretKey, logger}, nil
 }
 
 func (r *RedisAuthService) GenerateJWT(ctx context.Context, user domain.User) (string, error) {

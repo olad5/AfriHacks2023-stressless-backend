@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/domain"
@@ -16,6 +17,7 @@ import (
 type UserService struct {
 	userRepo    infra.UserRepository
 	authService auth.AuthService
+	logger      *zap.Logger
 }
 
 var (
@@ -24,14 +26,14 @@ var (
 	ErrInvalidToken      = errors.New("invalid token")
 )
 
-func NewUserService(userRepo infra.UserRepository, authService auth.AuthService) (*UserService, error) {
+func NewUserService(userRepo infra.UserRepository, authService auth.AuthService, logger *zap.Logger) (*UserService, error) {
 	if userRepo == nil {
 		return &UserService{}, errors.New("UserService failed to initialize, userRepo is nil")
 	}
 	if authService == nil {
 		return &UserService{}, errors.New("UserService failed to initialize, authService is nil")
 	}
-	return &UserService{userRepo, authService}, nil
+	return &UserService{userRepo, authService, logger}, nil
 }
 
 func (u *UserService) CreateUser(ctx context.Context, firstName, lastName, email, password string) (domain.User, error) {

@@ -5,14 +5,16 @@ import (
 
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/services/auth"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/usecases/users"
+	"go.uber.org/zap"
 )
 
 type UserHandler struct {
 	userService users.UserService
 	authService auth.AuthService
+	logger      *zap.Logger
 }
 
-func NewUserHandler(userService users.UserService, authService auth.AuthService) (*UserHandler, error) {
+func NewUserHandler(userService users.UserService, authService auth.AuthService, logger *zap.Logger) (*UserHandler, error) {
 	if userService == (users.UserService{}) {
 		return nil, errors.New("user service cannot be empty")
 	}
@@ -20,5 +22,5 @@ func NewUserHandler(userService users.UserService, authService auth.AuthService)
 		return nil, errors.New("auth service cannot be empty")
 	}
 
-	return &UserHandler{userService, authService}, nil
+	return &UserHandler{userService, authService, logger}, nil
 }
