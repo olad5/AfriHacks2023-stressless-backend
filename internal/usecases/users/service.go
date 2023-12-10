@@ -101,7 +101,7 @@ func (u *UserService) GetLoggedInUser(ctx context.Context) (domain.User, error) 
 	return existingUser, nil
 }
 
-func (u *UserService) CompleteUserOnboarding(ctx context.Context, stressLevel int64, mood domain.Mood, sleepQuality domain.SleepQuality, feeling string) (domain.User, error) {
+func (u *UserService) CompleteUserOnboarding(ctx context.Context, stressLevel int, mood domain.Mood, sleepQuality domain.SleepQuality, feeling string) (domain.User, error) {
 	jwtClaims, ok := auth.GetJWTClaims(ctx)
 	if !ok {
 		return domain.User{}, fmt.Errorf("error parsing JWTClaims: %w", ErrInvalidToken)
@@ -117,7 +117,7 @@ func (u *UserService) CompleteUserOnboarding(ctx context.Context, stressLevel in
 	}
 
 	// TODO:TODO: change this stressLessScore
-	var stressLessScore int64
+	var stressLessScore int
 
 	newMetric := domain.Metric{
 		ID:              primitive.NewObjectID(),

@@ -22,7 +22,7 @@ func (u UserHandler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) 
 	type requestDTO struct {
 		Mood         domain.Mood         `json:"mood"`
 		SleepQuality domain.SleepQuality `json:"sleep_quality"`
-		StressLevel  int64               `json:"stress_level"`
+		StressLevel  int                 `json:"stress_level"`
 		Feeling      string              `json:"feeling"`
 	}
 	var request requestDTO

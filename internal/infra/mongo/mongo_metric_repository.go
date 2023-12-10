@@ -74,11 +74,11 @@ func (m *MongoMetricRepository) GetRecentMetricsByUserId(ctx context.Context, us
 type mongoMetric struct {
 	ObjectID        primitive.ObjectID  `bson:"_id"`
 	OwnerId         primitive.ObjectID  `bson:"owner_id"`
-	StressLevel     int64               `bson:"stress_level"`
+	StressLevel     int                 `bson:"stress_level"`
 	Mood            domain.Mood         `bson:"mood"`
 	SleepQuality    domain.SleepQuality `bson:"sleep_quality"`
 	Feeling         string              `bson:"feeling"`
-	StressLessScore int64               `bson:"stress_less_score"`
+	StressLessScore int                 `bson:"stress_less_score"`
 	CreatedAt       time.Time           `bson:"created_at"`
 	UpdatedAt       time.Time           `bson:"updated_at"`
 }

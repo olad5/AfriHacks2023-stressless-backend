@@ -9,9 +9,8 @@ import (
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/infra"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.uber.org/zap"
-
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/zap"
 )
 
 var contextTimeoutDuration = 5 * time.Second

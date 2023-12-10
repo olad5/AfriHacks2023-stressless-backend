@@ -29,11 +29,11 @@ const (
 type Metric struct {
 	ID              primitive.ObjectID
 	OwnerId         primitive.ObjectID
-	StressLevel     int64
+	StressLevel     int
 	Mood            Mood
 	SleepQuality    SleepQuality
 	Feeling         string
-	StressLessScore int64
+	StressLessScore int
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

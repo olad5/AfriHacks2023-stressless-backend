@@ -6,6 +6,7 @@ require (
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/jaswdr/faker v1.19.1
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/xid v1.5.0
 	go.mongodb.org/mongo-driver v1.13.1
