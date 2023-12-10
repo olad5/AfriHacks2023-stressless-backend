@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
@@ -17,6 +18,7 @@ import (
 type UserService struct {
 	userRepo    infra.UserRepository
 	authService auth.AuthService
+	metricRepo  infra.MetricRepository
 	logger      *zap.Logger
 }
 
@@ -26,14 +28,17 @@ var (
 	ErrInvalidToken      = errors.New("invalid token")
 )
 
-func NewUserService(userRepo infra.UserRepository, authService auth.AuthService, logger *zap.Logger) (*UserService, error) {
+func NewUserService(userRepo infra.UserRepository, authService auth.AuthService, metricRepo infra.MetricRepository, logger *zap.Logger) (*UserService, error) {
 	if userRepo == nil {
 		return &UserService{}, errors.New("UserService failed to initialize, userRepo is nil")
 	}
 	if authService == nil {
 		return &UserService{}, errors.New("UserService failed to initialize, authService is nil")
 	}
-	return &UserService{userRepo, authService, logger}, nil
+	if metricRepo == nil {
+		return &UserService{}, errors.New("UserService failed to initialize, metricRepo is nil")
+	}
+	return &UserService{userRepo, authService, metricRepo, logger}, nil
 }
 
 func (u *UserService) CreateUser(ctx context.Context, firstName, lastName, email, password string) (domain.User, error) {
@@ -48,11 +53,14 @@ func (u *UserService) CreateUser(ctx context.Context, firstName, lastName, email
 	}
 
 	newUser := domain.User{
-		ID:        primitive.NewObjectID(),
-		Email:     email,
-		FirstName: firstName,
-		LastName:  lastName,
-		Password:  hashedPassword,
+		ID:                   primitive.NewObjectID(),
+		Email:                email,
+		FirstName:            firstName,
+		LastName:             lastName,
+		Password:             hashedPassword,
+		IsOnBoardingComplete: false,
+		CreatedAt:            time.Now(),
+		UpdatedAt:            time.Now(),
 	}
 
 	err = u.userRepo.CreateUser(ctx, newUser)
@@ -82,7 +90,7 @@ func (u *UserService) LogUserIn(ctx context.Context, email, password string) (st
 func (u *UserService) GetLoggedInUser(ctx context.Context) (domain.User, error) {
 	jwtClaims, ok := auth.GetJWTClaims(ctx)
 	if !ok {
-		return domain.User{}, fmt.Errorf("error parsing JWTClaims")
+		return domain.User{}, fmt.Errorf("error parsing JWTClaims: %w", ErrInvalidToken)
 	}
 	userId := jwtClaims.ID
 
@@ -91,6 +99,57 @@ func (u *UserService) GetLoggedInUser(ctx context.Context) (domain.User, error) 
 		return domain.User{}, err
 	}
 	return existingUser, nil
+}
+
+func (u *UserService) CompleteUserOnboarding(ctx context.Context, stressLevel int64, mood domain.Mood, sleepQuality domain.SleepQuality, feeling string) (domain.User, error) {
+	jwtClaims, ok := auth.GetJWTClaims(ctx)
+	if !ok {
+		return domain.User{}, fmt.Errorf("error parsing JWTClaims: %w", ErrInvalidToken)
+	}
+	userId := jwtClaims.ID
+
+	existingUser, err := u.userRepo.GetUserByUserId(ctx, userId)
+	if err != nil {
+		return domain.User{}, err
+	}
+	if existingUser.IsOnBoardingComplete {
+		return existingUser, err
+	}
+
+	// TODO:TODO: change this stressLessScore
+	var stressLessScore int64
+
+	newMetric := domain.Metric{
+		ID:              primitive.NewObjectID(),
+		OwnerId:         userId,
+		StressLevel:     stressLevel,
+		Mood:            mood,
+		SleepQuality:    sleepQuality,
+		StressLessScore: stressLessScore,
+		Feeling:         feeling,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+	err = u.metricRepo.CreateMetric(ctx, newMetric)
+	if err != nil {
+		return domain.User{}, err
+	}
+	// TODO:TODO: run the ai service here
+	updatedUser := domain.User{
+		ID:                   existingUser.ID,
+		Email:                existingUser.Email,
+		FirstName:            existingUser.FirstName,
+		LastName:             existingUser.LastName,
+		Password:             existingUser.Password,
+		IsOnBoardingComplete: true,
+		LastMetricLog:        time.Now(),
+		UpdatedAt:            time.Now(),
+	}
+	err = u.userRepo.UpdateUser(ctx, updatedUser)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return updatedUser, nil
 }
 
 func hashAndSalt(plainPassword []byte) (string, error) {

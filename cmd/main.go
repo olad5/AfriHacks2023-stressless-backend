@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.uber.org/zap"
 
 	"github.com/go-chi/chi/v5"
@@ -24,10 +25,18 @@ import (
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/services/auth"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/usecases/users"
 	"github.com/olad5/AfriHacks2023-stressless-backend/pkg/utils/logger"
+	mongoDriver "go.mongodb.org/mongo-driver/mongo"
 )
 
 func NewHttpRouter(ctx context.Context, configurations *config.Configurations, logger *zap.Logger) http.Handler {
-	userRepo, err := mongo.NewMongoUserRepo(ctx, configurations, logger)
+	opts := options.Client()
+	mongoClient, err := mongoDriver.Connect(ctx, opts.ApplyURI(configurations.DatabaseUrl))
+	if err != nil {
+		log.Fatal("failed to create a mongo client: %w", err)
+	}
+	mongoDatabase := mongoClient.Database(configurations.DatabaseName)
+
+	userRepo, err := mongo.NewMongoUserRepo(ctx, mongoDatabase, logger)
 	if err != nil {
 		log.Fatal("Error Initializing User Repo", err)
 	}
@@ -42,7 +51,12 @@ func NewHttpRouter(ctx context.Context, configurations *config.Configurations, l
 		log.Fatal("Error Initializing Auth Service", err)
 	}
 
-	userService, err := users.NewUserService(userRepo, authService, logger)
+	metricRepo, err := mongo.NewMongoMetricRepo(ctx, mongoDatabase, logger)
+	if err != nil {
+		log.Fatal("Error Initializing Metric Repo", err)
+	}
+
+	userService, err := users.NewUserService(userRepo, authService, metricRepo, logger)
 	if err != nil {
 		log.Fatal("Error Initializing UserService")
 	}
@@ -77,6 +91,7 @@ func NewHttpRouter(ctx context.Context, configurations *config.Configurations, l
 		r.Use(authMiddleware.EnsureAuthenticated(authService))
 
 		r.Get("/users/me", userHandler.GetLoggedInUser)
+		r.Patch("/users/onboarding", userHandler.CompleteOnboarding)
 	})
 
 	return router

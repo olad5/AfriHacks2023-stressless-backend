@@ -7,11 +7,13 @@ import (
 )
 
 type User struct {
-	ID        primitive.ObjectID
-	Email     string
-	FirstName string
-	LastName  string
-	Password  string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID                   primitive.ObjectID
+	Email                string
+	FirstName            string
+	LastName             string
+	Password             string
+	IsOnBoardingComplete bool
+	LastMetricLog        time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }

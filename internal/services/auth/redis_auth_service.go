@@ -30,7 +30,7 @@ var (
 
 const (
 	JWT_HASH_NAME       = "afriHacks2023-stressless-jwt-clients"
-	SessionTTLInMinutes = 10
+	SessionTTLInMinutes = 60 * 24 // 24hours
 )
 
 func NewRedisAuthService(ctx context.Context, cache infra.Cache, configurations *config.Configurations, logger *zap.Logger) (*RedisAuthService, error) {

@@ -14,4 +14,11 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, user domain.User) error
 	GetUserByEmail(ctx context.Context, email string) (domain.User, error)
 	GetUserByUserId(ctx context.Context, userId primitive.ObjectID) (domain.User, error)
+	UpdateUser(ctx context.Context, user domain.User) error
+}
+
+type MetricRepository interface {
+	CreateMetric(ctx context.Context, metric domain.Metric) error
+	UpdateMetricById(ctx context.Context, metric domain.Metric) error
+	GetRecentMetricsByUserId(ctx context.Context, userId primitive.ObjectID) ([]domain.Metric, error)
 }
