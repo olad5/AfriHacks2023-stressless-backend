@@ -117,8 +117,8 @@ func seedMetrics() {
 				SleepQuality:    randomSleepQuality(),
 				Mood:            randomMood(),
 				Feeling:         fakerInstance.App().Faker.Lorem().Paragraph(2),
-				CreatedAt:       createIsoDateFromString(i),
-				UpdatedAt:       createIsoDateFromString(i),
+				CreatedAt:       createPreviousIsoDateFromString(i),
+				UpdatedAt:       createPreviousIsoDateFromString(i),
 			}
 			row = []string{metric.ID.Hex(), metric.OwnerId.Hex(), string(metric.Mood), string(metric.SleepQuality), fmt.Sprint(metric.StressLessScore), fmt.Sprint(metric.StressLevel), metric.Feeling, metric.CreatedAt.Format(layout), metric.UpdatedAt.Format(layout)}
 			e := writer.Write(row)
@@ -149,8 +149,8 @@ func hashAndSalt(plainPassword []byte) (string, error) {
 	return string(hash), nil
 }
 
-func createIsoDateFromString(numOfDaysFromCurrentTime int) time.Time {
-	return time.Now().AddDate(0, 0, numOfDaysFromCurrentTime)
+func createPreviousIsoDateFromString(numOfDaysFromCurrentTime int) time.Time {
+	return time.Now().AddDate(0, 0, -numOfDaysFromCurrentTime)
 }
 
 func randomIntWithMaxValueInclusive(min, max int) int {

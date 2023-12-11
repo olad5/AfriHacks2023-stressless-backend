@@ -58,6 +58,21 @@ func (m *MongoUserRepository) UpdateUser(ctx context.Context, user domain.User) 
 	return nil
 }
 
+func (m *MongoUserRepository) UpdateUserLastMetricLog(ctx context.Context, user domain.User) error {
+	updatedUser := domain.User{
+		ID:                   user.ID,
+		Email:                user.Email,
+		FirstName:            user.FirstName,
+		LastName:             user.LastName,
+		Password:             user.Password,
+		IsOnBoardingComplete: user.IsOnBoardingComplete,
+		LastMetricLog:        time.Now(),
+		UpdatedAt:            time.Now(),
+	}
+
+	return m.UpdateUser(ctx, updatedUser)
+}
+
 func (m *MongoUserRepository) GetUserByEmail(ctx context.Context, userEmail string) (domain.User, error) {
 	user := mongoUser{}
 	err := m.users.FindOne(ctx, bson.M{"email": userEmail}).Decode(&user)

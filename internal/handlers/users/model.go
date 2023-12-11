@@ -34,3 +34,29 @@ func ToUserDTO(user domain.User) UserDTO {
 		LastMetricLog:        &user.LastMetricLog,
 	}
 }
+
+type MetricDTO struct {
+	ID              string     `json:"id"`
+	OwnerId         string     `json:"owner_id"`
+	StressLevel     int        `json:"stress_level"`
+	Mood            string     `json:"mood"`
+	SleepQuality    string     `json:"sleep_quality"`
+	StressLessScore int        `json:"stress_less_score"`
+	Feeling         string     `json:"feeling"`
+	CreatedAt       *time.Time `json:"created_at"`
+	UpdatedAt       *time.Time `json:"updated_at"`
+}
+
+func ToMetricDTO(metric domain.Metric) MetricDTO {
+	return MetricDTO{
+		ID:              metric.ID.Hex(),
+		OwnerId:         metric.OwnerId.Hex(),
+		StressLevel:     metric.StressLevel,
+		Mood:            string(metric.Mood),
+		SleepQuality:    string(metric.SleepQuality),
+		StressLessScore: metric.StressLessScore,
+		Feeling:         metric.Feeling,
+		CreatedAt:       &metric.CreatedAt,
+		UpdatedAt:       &metric.UpdatedAt,
+	}
+}

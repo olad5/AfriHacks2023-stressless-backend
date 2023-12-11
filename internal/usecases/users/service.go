@@ -101,6 +101,77 @@ func (u *UserService) GetLoggedInUser(ctx context.Context) (domain.User, error) 
 	return existingUser, nil
 }
 
+func (u *UserService) CreateDailyLog(ctx context.Context, stressLevel int, mood domain.Mood, sleepQuality domain.SleepQuality, feeling string) (domain.Metric, error) {
+	jwtClaims, ok := auth.GetJWTClaims(ctx)
+	if !ok {
+		return domain.Metric{}, fmt.Errorf("error parsing JWTClaims: %w", ErrInvalidToken)
+	}
+	userId := jwtClaims.ID
+
+	existingUser, err := u.userRepo.GetUserByUserId(ctx, userId)
+	if err != nil {
+		return domain.Metric{}, err
+	}
+
+	exisitingMetric, err := u.metricRepo.GetUserTodayLogIfExists(ctx, existingUser.ID)
+	if err != nil {
+		if !errors.Is(err, infra.ErrMetricNotFound) {
+			return domain.Metric{}, err
+		}
+	}
+	if exisitingMetric.OwnerId == existingUser.ID {
+		return exisitingMetric, nil
+	}
+
+	// TODO:TODO: change this stressLessScore
+	// TODO:TODO: run the ai service here to get the score
+	var stressLessScore int
+
+	newMetric := domain.Metric{
+		ID:              primitive.NewObjectID(),
+		OwnerId:         existingUser.ID,
+		StressLevel:     stressLevel,
+		Mood:            mood,
+		SleepQuality:    sleepQuality,
+		StressLessScore: stressLessScore,
+		Feeling:         feeling,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+	}
+
+	err = u.metricRepo.CreateMetric(ctx, newMetric)
+	if err != nil {
+		return domain.Metric{}, err
+	}
+
+	err = u.userRepo.UpdateUserLastMetricLog(ctx, existingUser)
+	if err != nil {
+		return domain.Metric{}, err
+	}
+
+	return newMetric, nil
+}
+
+func (u *UserService) GetRecentMetricsByUserId(ctx context.Context) ([]domain.Metric, error) {
+	// TODO:TODO: this method has issues
+	jwtClaims, ok := auth.GetJWTClaims(ctx)
+	if !ok {
+		return []domain.Metric{}, fmt.Errorf("error parsing JWTClaims: %w", ErrInvalidToken)
+	}
+	userId := jwtClaims.ID
+
+	// TODO:TODO: I should add the limit, rowperpage and offset stuff
+	existingUser, err := u.userRepo.GetUserByUserId(ctx, userId)
+	if err != nil {
+		return []domain.Metric{}, err
+	}
+	metrics, err := u.metricRepo.GetRecentMetricsByUserId(ctx, existingUser.ID)
+	if err != nil {
+		return []domain.Metric{}, err
+	}
+	return metrics, nil
+}
+
 func (u *UserService) CompleteUserOnboarding(ctx context.Context, stressLevel int, mood domain.Mood, sleepQuality domain.SleepQuality, feeling string) (domain.User, error) {
 	jwtClaims, ok := auth.GetJWTClaims(ctx)
 	if !ok {

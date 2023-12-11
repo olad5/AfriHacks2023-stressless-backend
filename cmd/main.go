@@ -94,6 +94,16 @@ func NewHttpRouter(ctx context.Context, configurations *config.Configurations, l
 		r.Patch("/users/onboarding", userHandler.CompleteOnboarding)
 	})
 
+	router.Group(func(r chi.Router) {
+		r.Use(
+			middleware.AllowContentType("application/json"),
+			middleware.SetHeader("Content-Type", "application/json"),
+		)
+		r.Use(authMiddleware.EnsureAuthenticated(authService))
+
+		r.Post("/metrics", userHandler.CreateDailyLog)
+	})
+
 	return router
 }
 

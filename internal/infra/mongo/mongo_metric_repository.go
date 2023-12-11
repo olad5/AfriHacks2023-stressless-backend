@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/domain"
+	"github.com/olad5/AfriHacks2023-stressless-backend/internal/infra"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
@@ -56,16 +57,66 @@ func (m *MongoMetricRepository) UpdateMetricById(ctx context.Context, metric dom
 	return nil
 }
 
+func (m *MongoMetricRepository) GetUserTodayLogIfExists(ctx context.Context, userId primitive.ObjectID) (domain.Metric, error) {
+	ctx, cancel := context.WithTimeout(ctx, contextTimeoutDuration)
+	defer cancel()
+
+	mongoMetric := mongoMetric{}
+	startTime, endTime := getDayBounds()
+
+	filter := bson.M{
+		"owner_id": userId,
+		"created_at": bson.M{
+			"$gte": primitive.NewDateTimeFromTime(startTime),
+			"$lt":  primitive.NewDateTimeFromTime(endTime),
+		},
+	}
+
+	err := m.metrics.FindOne(ctx, filter).Decode(&mongoMetric)
+	if err != nil {
+		m.logger.Error("failed to find mongo metric for today: %w", zap.Error(err))
+		return domain.Metric{}, infra.ErrMetricNotFound
+	}
+	return toDomainMetric(mongoMetric), nil
+}
+
+func getDayBounds() (time.Time, time.Time) {
+	now := time.Now()
+	year, month, day := now.Date()
+
+	earliest := time.Date(year, month, day, 0, 0, 0, 0, now.Location())
+
+	latest := time.Date(year, month, day, 23, 59, 59, int(time.Second-time.Nanosecond), now.Location())
+
+	return earliest, latest
+}
+
 func (m *MongoMetricRepository) GetRecentMetricsByUserId(ctx context.Context, userId primitive.ObjectID) ([]domain.Metric, error) {
-	mongoMetrics := []mongoMetric{}
-	err := m.metrics.FindOne(ctx, bson.M{"owner_id": userId}).Decode(&mongoMetrics)
+	// TODO:TODO: I think this method has issues
+	mongoMetrics := []*mongoMetric{}
+	filter := bson.M{"owner_id": userId}
+	cursor, err := m.metrics.Find(ctx, filter)
 	if err != nil {
 		m.logger.Error("failed retrieve recent metrics by user id: %w", zap.Error(err))
 		return []domain.Metric{}, err
 	}
+	for cursor.Next(ctx) {
+		var mm mongoMetric
+		err := cursor.Decode(&mm)
+		if err != nil {
+			m.logger.Error("failed to decode metric in list of metrics : %w", zap.Error(err))
+			return []domain.Metric{}, err
+		}
+		mongoMetrics = append(mongoMetrics, &mm)
+	}
+	if err := cursor.Err(); err != nil {
+		return []domain.Metric{}, err
+	}
+	cursor.Close(ctx)
+
 	result := []domain.Metric{}
 	for _, element := range mongoMetrics {
-		result = append(result, toDomainMetric(element))
+		result = append(result, toDomainMetric(*element))
 	}
 
 	return result, nil
