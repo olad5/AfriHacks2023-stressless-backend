@@ -101,6 +101,7 @@ func NewHttpRouter(ctx context.Context, configurations *config.Configurations, l
 		)
 		r.Use(authMiddleware.EnsureAuthenticated(authService))
 
+		r.Get("/metrics/{id}", userHandler.GetMetricByMetricId)
 		r.Post("/metrics", userHandler.CreateDailyLog)
 	})
 

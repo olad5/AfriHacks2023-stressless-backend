@@ -23,9 +23,10 @@ type UserService struct {
 }
 
 var (
-	ErrUserAlreadyExists = errors.New("email already exist")
-	ErrPasswordIncorrect = errors.New("invalid credentials")
-	ErrInvalidToken      = errors.New("invalid token")
+	ErrUserAlreadyExists    = errors.New("email already exist")
+	ErrPasswordIncorrect    = errors.New("invalid credentials")
+	ErrInvalidToken         = errors.New("invalid token")
+	ErrUserDoesNotOwnMetric = errors.New("user does not own metric")
 )
 
 func NewUserService(userRepo infra.UserRepository, authService auth.AuthService, metricRepo infra.MetricRepository, logger *zap.Logger) (*UserService, error) {
@@ -150,6 +151,29 @@ func (u *UserService) CreateDailyLog(ctx context.Context, stressLevel int, mood 
 	}
 
 	return newMetric, nil
+}
+
+func (u *UserService) GetMetricByMetricId(ctx context.Context, metricId primitive.ObjectID) (domain.Metric, error) {
+	jwtClaims, ok := auth.GetJWTClaims(ctx)
+	if !ok {
+		return domain.Metric{}, fmt.Errorf("error parsing JWTClaims: %w", ErrInvalidToken)
+	}
+	userId := jwtClaims.ID
+
+	existingUser, err := u.userRepo.GetUserByUserId(ctx, userId)
+	if err != nil {
+		return domain.Metric{}, err
+	}
+
+	metric, err := u.metricRepo.GetMetricById(ctx, metricId)
+	if err != nil {
+		return domain.Metric{}, err
+	}
+
+	if metric.OwnerId != existingUser.ID {
+		return domain.Metric{}, ErrUserDoesNotOwnMetric
+	}
+	return metric, nil
 }
 
 func (u *UserService) GetRecentMetricsByUserId(ctx context.Context) ([]domain.Metric, error) {

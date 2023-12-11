@@ -57,6 +57,23 @@ func (m *MongoMetricRepository) UpdateMetricById(ctx context.Context, metric dom
 	return nil
 }
 
+func (m *MongoMetricRepository) GetMetricById(ctx context.Context, metricId primitive.ObjectID) (domain.Metric, error) {
+	ctx, cancel := context.WithTimeout(ctx, contextTimeoutDuration)
+	defer cancel()
+
+	mongoMetric := mongoMetric{}
+
+	filter := bson.M{
+		"_id": metricId,
+	}
+	err := m.metrics.FindOne(ctx, filter).Decode(&mongoMetric)
+	if err != nil {
+		m.logger.Error("failed to find metric by id: %w", zap.Error(err))
+		return domain.Metric{}, infra.ErrMetricNotFound
+	}
+	return toDomainMetric(mongoMetric), nil
+}
+
 func (m *MongoMetricRepository) GetUserTodayLogIfExists(ctx context.Context, userId primitive.ObjectID) (domain.Metric, error) {
 	ctx, cancel := context.WithTimeout(ctx, contextTimeoutDuration)
 	defer cancel()

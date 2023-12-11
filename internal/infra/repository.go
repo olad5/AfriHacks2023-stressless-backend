@@ -25,5 +25,6 @@ type MetricRepository interface {
 	CreateMetric(ctx context.Context, metric domain.Metric) error
 	GetUserTodayLogIfExists(ctx context.Context, userId primitive.ObjectID) (domain.Metric, error)
 	UpdateMetricById(ctx context.Context, metric domain.Metric) error
+	GetMetricById(ctx context.Context, metricId primitive.ObjectID) (domain.Metric, error)
 	GetRecentMetricsByUserId(ctx context.Context, userId primitive.ObjectID) ([]domain.Metric, error)
 }

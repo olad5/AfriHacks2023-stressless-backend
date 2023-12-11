@@ -9,4 +9,4 @@ const (
 	ErrMissingBody        = "missing body request"
 )
 
-var ErrInvalidID = errors.New("ID is not in its proper form")
+var ErrInvalidID = errors.New("id is not in its proper form")
