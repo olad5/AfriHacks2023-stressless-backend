@@ -60,3 +60,108 @@ func ToMetricDTO(metric domain.Metric) MetricDTO {
 		UpdatedAt:       &metric.UpdatedAt,
 	}
 }
+
+// ----------------------------------
+// stress less scores start
+// ----------------------------------
+type StatsStressLessScoreDTO struct {
+	MetricId        string     `json:"metric_id"`
+	StressLessScore int        `json:"stress_less_score"`
+	CreatedAt       *time.Time `json:"created_at"`
+	UpdatedAt       *time.Time `json:"updated_at"`
+}
+type StatsStressLessScorePagedDTO struct {
+	// TODO:TODO: i am not sure about this limit, i think it should be page
+	Limit int                       `json:"limit"`
+	Items []StatsStressLessScoreDTO `json:"items"`
+}
+
+func ToStatsStressLessScoreDTO(metric domain.Metric) StatsStressLessScoreDTO {
+	return StatsStressLessScoreDTO{
+		MetricId:        metric.ID.Hex(),
+		StressLessScore: metric.StressLessScore,
+		CreatedAt:       &metric.CreatedAt,
+		UpdatedAt:       &metric.UpdatedAt,
+	}
+}
+
+func ToStatsStressLessScorePagedDTO(metrics []domain.Metric) StatsStressLessScorePagedDTO {
+	items := []StatsStressLessScoreDTO{}
+	for _, metric := range metrics {
+		items = append(items, ToStatsStressLessScoreDTO(metric))
+	}
+	return StatsStressLessScorePagedDTO{
+		Limit: len(items),
+		Items: items,
+	}
+}
+
+// ----------------------------------
+// mood stats start
+// ----------------------------------
+type StatsMoodDTO struct {
+	MetricId  string     `json:"metric_id"`
+	Mood      string     `json:"mood"`
+	CreatedAt *time.Time `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at"`
+}
+type StatsMoodPagedDTO struct {
+	// TODO:TODO: i am not sure about this limit, i think it should be page
+	Limit int            `json:"limit"`
+	Items []StatsMoodDTO `json:"items"`
+}
+
+func ToStatsMoodDTO(metric domain.Metric) StatsMoodDTO {
+	return StatsMoodDTO{
+		MetricId:  metric.ID.Hex(),
+		Mood:      string(metric.Mood),
+		CreatedAt: &metric.CreatedAt,
+		UpdatedAt: &metric.UpdatedAt,
+	}
+}
+
+func ToStatsMoodPagedDTO(metrics []domain.Metric) StatsMoodPagedDTO {
+	items := []StatsMoodDTO{}
+	for _, metric := range metrics {
+		items = append(items, ToStatsMoodDTO(metric))
+	}
+	return StatsMoodPagedDTO{
+		Limit: len(items),
+		Items: items,
+	}
+}
+
+// ----------------------------------
+// sleep_quality  stats start
+// ----------------------------------
+type StatsSleepQualityDTO struct {
+	MetricId     string     `json:"metric_id"`
+	SleepQuality string     `json:"sleep_quality"`
+	CreatedAt    *time.Time `json:"created_at"`
+	UpdatedAt    *time.Time `json:"updated_at"`
+}
+type StatsSleepQualityPagedDTO struct {
+	// TODO:TODO: i am not sure about this limit, i think it should be page
+	Limit int                    `json:"limit"`
+	Items []StatsSleepQualityDTO `json:"items"`
+}
+
+func ToStatsSleepQualityDTO(metric domain.Metric) StatsSleepQualityDTO {
+	return StatsSleepQualityDTO{
+		MetricId:     metric.ID.Hex(),
+		SleepQuality: string(metric.SleepQuality),
+		CreatedAt:    &metric.CreatedAt,
+		UpdatedAt:    &metric.UpdatedAt,
+	}
+}
+
+func ToStatsSleepQualityPagedDTO(metrics []domain.Metric) StatsSleepQualityPagedDTO {
+	items := []StatsSleepQualityDTO{}
+	for _, metric := range metrics {
+		items = append(items, ToStatsSleepQualityDTO(metric))
+	}
+	return StatsSleepQualityPagedDTO{
+		Limit: len(items),
+		Items: items,
+	}
+}
