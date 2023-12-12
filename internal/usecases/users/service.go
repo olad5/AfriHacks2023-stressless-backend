@@ -176,6 +176,29 @@ func (u *UserService) GetMetricByMetricId(ctx context.Context, metricId primitiv
 	return metric, nil
 }
 
+func (u *UserService) GetMetricForToday(ctx context.Context) (domain.Metric, error) {
+	jwtClaims, ok := auth.GetJWTClaims(ctx)
+	if !ok {
+		return domain.Metric{}, fmt.Errorf("error parsing JWTClaims: %w", ErrInvalidToken)
+	}
+	userId := jwtClaims.ID
+
+	existingUser, err := u.userRepo.GetUserByUserId(ctx, userId)
+	if err != nil {
+		return domain.Metric{}, err
+	}
+
+	metric, err := u.metricRepo.GetUserTodayLogIfExists(ctx, userId)
+	if err != nil {
+		return domain.Metric{}, err
+	}
+
+	if metric.OwnerId != existingUser.ID {
+		return domain.Metric{}, ErrUserDoesNotOwnMetric
+	}
+	return metric, nil
+}
+
 func (u *UserService) GetRecentMetricsByUserId(ctx context.Context) ([]domain.Metric, error) {
 	// TODO:TODO: this method has issues
 	jwtClaims, ok := auth.GetJWTClaims(ctx)
@@ -230,6 +253,8 @@ func (u *UserService) CompleteUserOnboarding(ctx context.Context, stressLevel in
 		return domain.User{}, err
 	}
 	// TODO:TODO: run the ai service here
+	// TODO:TODO: this url might help  https://frontendmasters.com/courses/openai-node/
+
 	updatedUser := domain.User{
 		ID:                   existingUser.ID,
 		Email:                existingUser.Email,

@@ -102,6 +102,7 @@ func NewHttpRouter(ctx context.Context, configurations *config.Configurations, l
 		r.Use(authMiddleware.EnsureAuthenticated(authService))
 
 		r.Get("/metrics/{id}", userHandler.GetMetricByMetricId)
+		r.Get("/metrics/today/", userHandler.GetMetricForToday)
 		r.Get("/metrics/stats/stress_less_scores", userHandler.GetRecentStresslessScores)
 		r.Get("/metrics/stats/moods", userHandler.GetRecentMoods)
 		r.Get("/metrics/stats/sleep_quality_scores", userHandler.GetRecentSleepQualityStats)
