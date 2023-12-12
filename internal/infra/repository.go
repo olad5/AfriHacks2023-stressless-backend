@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	ErrUserNotFound   = errors.New("user not found")
-	ErrMetricNotFound = errors.New("metric not found")
+	ErrUserNotFound           = errors.New("user not found")
+	ErrMetricNotFound         = errors.New("metric not found")
+	ErrRecommendationNotFound = errors.New("recommendation not found")
 )
 
 type UserRepository interface {
@@ -27,4 +28,11 @@ type MetricRepository interface {
 	UpdateMetricById(ctx context.Context, metric domain.Metric) error
 	GetMetricById(ctx context.Context, metricId primitive.ObjectID) (domain.Metric, error)
 	GetRecentMetricsByUserId(ctx context.Context, userId primitive.ObjectID) ([]domain.Metric, error)
+}
+
+type RecommendationRepository interface {
+	CreateRecommendation(ctx context.Context, metric domain.Recommendation) error
+	UpdateRecommendationById(ctx context.Context, metric domain.Recommendation) error
+	GetRecommendationById(ctx context.Context, metricId primitive.ObjectID) (domain.Recommendation, error)
+	GetRecommendationByMetricId(ctx context.Context, metricId primitive.ObjectID, metricType string) (domain.Recommendation, error)
 }

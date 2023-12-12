@@ -13,13 +13,16 @@ import (
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/domain"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/infra"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/services/auth"
+	"github.com/olad5/AfriHacks2023-stressless-backend/internal/services/recommendations"
 )
 
 type UserService struct {
-	userRepo    infra.UserRepository
-	authService auth.AuthService
-	metricRepo  infra.MetricRepository
-	logger      *zap.Logger
+	userRepo              infra.UserRepository
+	authService           auth.AuthService
+	metricRepo            infra.MetricRepository
+	recommendationService recommendations.RecommendationService
+	recommendationRepo    infra.RecommendationRepository
+	logger                *zap.Logger
 }
 
 var (
@@ -29,7 +32,7 @@ var (
 	ErrUserDoesNotOwnMetric = errors.New("user does not own metric")
 )
 
-func NewUserService(userRepo infra.UserRepository, authService auth.AuthService, metricRepo infra.MetricRepository, logger *zap.Logger) (*UserService, error) {
+func NewUserService(userRepo infra.UserRepository, authService auth.AuthService, metricRepo infra.MetricRepository, recommendationService recommendations.RecommendationService, recommendationRepo infra.RecommendationRepository, logger *zap.Logger) (*UserService, error) {
 	if userRepo == nil {
 		return &UserService{}, errors.New("UserService failed to initialize, userRepo is nil")
 	}
@@ -39,7 +42,13 @@ func NewUserService(userRepo infra.UserRepository, authService auth.AuthService,
 	if metricRepo == nil {
 		return &UserService{}, errors.New("UserService failed to initialize, metricRepo is nil")
 	}
-	return &UserService{userRepo, authService, metricRepo, logger}, nil
+	if recommendationService == nil {
+		return &UserService{}, errors.New("UserService failed to initialize, recommendationService is nil")
+	}
+	if recommendationRepo == nil {
+		return &UserService{}, errors.New("UserService failed to initialize, recommendationRepo is nil")
+	}
+	return &UserService{userRepo, authService, metricRepo, recommendationService, recommendationRepo, logger}, nil
 }
 
 func (u *UserService) CreateUser(ctx context.Context, firstName, lastName, email, password string) (domain.User, error) {
@@ -124,9 +133,10 @@ func (u *UserService) CreateDailyLog(ctx context.Context, stressLevel int, mood 
 		return exisitingMetric, nil
 	}
 
-	// TODO:TODO: change this stressLessScore
-	// TODO:TODO: run the ai service here to get the score
-	var stressLessScore int
+	stressLessScore, err := u.recommendationService.GetStresslessScore(ctx, stressLevel, mood, sleepQuality, feeling)
+	if err != nil {
+		return domain.Metric{}, fmt.Errorf("error generating stressScore: %w", err)
+	}
 
 	newMetric := domain.Metric{
 		ID:              primitive.NewObjectID(),
@@ -150,7 +160,45 @@ func (u *UserService) CreateDailyLog(ctx context.Context, stressLevel int, mood 
 		return domain.Metric{}, err
 	}
 
+	rs, err := generateRecommendations(ctx, u, newMetric)
+	if err != nil {
+		return domain.Metric{}, err
+	}
+
+	for _, recommendation := range rs {
+		err = u.recommendationRepo.CreateRecommendation(ctx, recommendation)
+		if err != nil {
+			return domain.Metric{}, fmt.Errorf("error saving recommendation : %w", err)
+		}
+	}
+
 	return newMetric, nil
+}
+
+func generateRecommendations(ctx context.Context, u *UserService, newMetric domain.Metric) ([]domain.Recommendation, error) {
+	stresslessRecommendation, err := u.recommendationService.GetRecommendationUsingStressScore(ctx, newMetric)
+	if err != nil {
+		return []domain.Recommendation{}, fmt.Errorf("error generating stressless recommendation : %w", err)
+	}
+	stresslevelRecommendation, err := u.recommendationService.GetRecommendationUsingStressLevel(ctx, newMetric)
+	if err != nil {
+		return []domain.Recommendation{}, fmt.Errorf("error generating stresslevel recommendation : %w", err)
+	}
+	stressQualityRecommendation, err := u.recommendationService.GetRecommendationUsingSleepQuality(ctx, newMetric)
+	if err != nil {
+		return []domain.Recommendation{}, fmt.Errorf("error generating stressQuality recommendation : %w", err)
+	}
+	moodRecommendation, err := u.recommendationService.GetRecommendationUsingStressLevel(ctx, newMetric)
+	if err != nil {
+		return []domain.Recommendation{}, fmt.Errorf("error generating mood recommendation : %w", err)
+	}
+	rs := []domain.Recommendation{
+		stresslessRecommendation,
+		stresslevelRecommendation,
+		stressQualityRecommendation,
+		moodRecommendation,
+	}
+	return rs, nil
 }
 
 func (u *UserService) GetMetricByMetricId(ctx context.Context, metricId primitive.ObjectID) (domain.Metric, error) {
@@ -174,6 +222,34 @@ func (u *UserService) GetMetricByMetricId(ctx context.Context, metricId primitiv
 		return domain.Metric{}, ErrUserDoesNotOwnMetric
 	}
 	return metric, nil
+}
+
+func (u *UserService) GetRecommendationByMetricId(ctx context.Context, metricId primitive.ObjectID, metricType string) (domain.Recommendation, error) {
+	jwtClaims, ok := auth.GetJWTClaims(ctx)
+	if !ok {
+		return domain.Recommendation{}, fmt.Errorf("error parsing JWTClaims: %w", ErrInvalidToken)
+	}
+	userId := jwtClaims.ID
+
+	existingUser, err := u.userRepo.GetUserByUserId(ctx, userId)
+	if err != nil {
+		return domain.Recommendation{}, err
+	}
+
+	metric, err := u.metricRepo.GetMetricById(ctx, metricId)
+	if err != nil {
+		return domain.Recommendation{}, err
+	}
+
+	if metric.OwnerId != existingUser.ID {
+		return domain.Recommendation{}, ErrUserDoesNotOwnMetric
+	}
+	recommendation, err := u.recommendationRepo.GetRecommendationByMetricId(ctx, metricId, metricType)
+	if err != nil {
+		return domain.Recommendation{}, err
+	}
+
+	return recommendation, nil
 }
 
 func (u *UserService) GetMetricForToday(ctx context.Context) (domain.Metric, error) {
@@ -234,8 +310,10 @@ func (u *UserService) CompleteUserOnboarding(ctx context.Context, stressLevel in
 		return existingUser, err
 	}
 
-	// TODO:TODO: change this stressLessScore
-	var stressLessScore int
+	stressLessScore, err := u.recommendationService.GetStresslessScore(ctx, stressLevel, mood, sleepQuality, feeling)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("error generating stressScore: %w", err)
+	}
 
 	newMetric := domain.Metric{
 		ID:              primitive.NewObjectID(),
@@ -252,8 +330,19 @@ func (u *UserService) CompleteUserOnboarding(ctx context.Context, stressLevel in
 	if err != nil {
 		return domain.User{}, err
 	}
-	// TODO:TODO: run the ai service here
+
 	// TODO:TODO: this url might help  https://frontendmasters.com/courses/openai-node/
+	rs, err := generateRecommendations(ctx, u, newMetric)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	for _, recommendation := range rs {
+		err = u.recommendationRepo.CreateRecommendation(ctx, recommendation)
+		if err != nil {
+			return domain.User{}, fmt.Errorf("error saving recommendation : %w", err)
+		}
+	}
 
 	updatedUser := domain.User{
 		ID:                   existingUser.ID,

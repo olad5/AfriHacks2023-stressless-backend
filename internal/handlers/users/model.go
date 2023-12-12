@@ -165,3 +165,43 @@ func ToStatsSleepQualityPagedDTO(metrics []domain.Metric) StatsSleepQualityPaged
 		Items: items,
 	}
 }
+
+type RecommendationItemDTO struct {
+	Index    int    `json:"index"`
+	Heading  string `json:"heading"`
+	Text     string `json:"text"`
+	ImageUrl string `json:"image_url"`
+}
+
+type RecommendationDTO struct {
+	ID         string                  `json:"id"`
+	MetricId   string                  `json:"metric_id"`
+	MetricType string                  `json:"metric_type"`
+	Items      []RecommendationItemDTO `json:"items"`
+	CreatedAt  *time.Time              `json:"created_at"`
+	UpdatedAt  *time.Time              `json:"updated_at"`
+}
+
+func ToRecommendationItemDTO(r domain.RecommendationItem) RecommendationItemDTO {
+	return RecommendationItemDTO{
+		Index:    r.Index,
+		Heading:  r.Heading,
+		Text:     r.Text,
+		ImageUrl: r.ImageUrl,
+	}
+}
+
+func ToRecommendationDTO(recommendation domain.Recommendation) RecommendationDTO {
+	items := []RecommendationItemDTO{}
+	for _, metric := range recommendation.Items {
+		items = append(items, ToRecommendationItemDTO(metric))
+	}
+	return RecommendationDTO{
+		ID:         recommendation.ID.Hex(),
+		MetricId:   recommendation.MetricId.Hex(),
+		MetricType: recommendation.MetricType,
+		Items:      items,
+		CreatedAt:  &recommendation.CreatedAt,
+		UpdatedAt:  &recommendation.UpdatedAt,
+	}
+}

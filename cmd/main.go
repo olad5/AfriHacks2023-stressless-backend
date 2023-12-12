@@ -23,6 +23,7 @@ import (
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/infra/mongo"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/infra/redis"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/services/auth"
+	"github.com/olad5/AfriHacks2023-stressless-backend/internal/services/recommendations"
 	"github.com/olad5/AfriHacks2023-stressless-backend/internal/usecases/users"
 	"github.com/olad5/AfriHacks2023-stressless-backend/pkg/utils/logger"
 	mongoDriver "go.mongodb.org/mongo-driver/mongo"
@@ -56,7 +57,17 @@ func NewHttpRouter(ctx context.Context, configurations *config.Configurations, l
 		log.Fatal("Error Initializing Metric Repo", err)
 	}
 
-	userService, err := users.NewUserService(userRepo, authService, metricRepo, logger)
+	recommendationRepo, err := mongo.NewMongoRecommendationRepo(ctx, mongoDatabase, logger)
+	if err != nil {
+		log.Fatal("Error Initializing Recommendation Repo", err)
+	}
+
+	stubService := &recommendations.StubRecommendationService{
+		// TODO:TODO: I dont know why this is not compiling
+		// client: &http.Client{},
+		// url:    "",
+	}
+	userService, err := users.NewUserService(userRepo, authService, metricRepo, stubService, recommendationRepo, logger)
 	if err != nil {
 		log.Fatal("Error Initializing UserService")
 	}
@@ -106,6 +117,7 @@ func NewHttpRouter(ctx context.Context, configurations *config.Configurations, l
 		r.Get("/metrics/stats/stress_less_scores", userHandler.GetRecentStresslessScores)
 		r.Get("/metrics/stats/moods", userHandler.GetRecentMoods)
 		r.Get("/metrics/stats/sleep_quality_scores", userHandler.GetRecentSleepQualityStats)
+		r.Get("/metrics/recommendations/{id}", userHandler.GetRecommendationByMetricId)
 		r.Post("/metrics", userHandler.CreateDailyLog)
 	})
 
